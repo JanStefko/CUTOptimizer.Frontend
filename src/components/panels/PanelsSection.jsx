@@ -59,7 +59,7 @@ function PanelsSection({
       </div>
 
       <div className="mt-4 overflow-x-auto">
-        <table className="min-w-[1080px] table-fixed border-separate border-spacing-0">
+        <table className="min-w-270 table-fixed border-separate border-spacing-0">
           <colgroup>
             <col className="w-10" />
             <col className="w-16" />
