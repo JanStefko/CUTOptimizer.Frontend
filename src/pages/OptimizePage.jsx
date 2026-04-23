@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react'
 import EdgeAssignmentsSection from '../components/edges/EdgeAssignmentsSection'
 import MaterialSelector from '../components/materials/MaterialSelector'
 import PanelsSection from '../components/panels/PanelsSection'
+import OptimizationSheetsSection from '../components/results/OptimizationSheetsSection'
+import OptimizationSummary from '../components/results/OptimizationSummary'
 import { getEdgeBandings } from '../services/edgeBandingsService'
 import { optimizeCutPlan } from '../services/optimizeService'
 import { getSheetMaterials } from '../services/sheetMaterialsService'
-import OptimizationSheetsSection from '../components/results/OptimizationSheetsSection'
-import OptimizationSummary from '../components/results/OptimizationSummary'
 
 function createEmptyPanelRow() {
   return {
@@ -327,7 +327,7 @@ function OptimizePage() {
       {optimizationResult?.cutPlan && (
         <>
           <OptimizationSummary cutPlan={optimizationResult.cutPlan} />
-          <OptimizationSheetsSection sheets={optimizationResult.cutPlan.sheets} />
+          <OptimizationSheetsSection cutPlan={optimizationResult.cutPlan} />
         </>
       )}
     </div>

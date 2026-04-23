@@ -1,15 +1,36 @@
+import { useMemo, useState } from 'react'
 import {
   formatAreaMm2ToM2,
   formatBoolean,
   formatNumber,
   formatPercent,
 } from '../../utils/formatters'
+import SheetLayoutPreview from './SheetLayoutPreview'
 
 function formatEdgeCodes(item) {
   return `P:${item.frontEdgeCode} Z:${item.backEdgeCode} L:${item.leftEdgeCode} R:${item.rightEdgeCode}`
 }
 
-function OptimizationSheetsSection({ sheets = [] }) {
+function getUnplacedPanels(sheets, totalPanelsCount) {
+  const placedItems = sheets.flatMap((sheet) => sheet.items)
+  const placedCount = placedItems.length
+  const missingCount = Math.max(totalPanelsCount - placedCount, 0)
+
+  return {
+    placedCount,
+    missingCount,
+  }
+}
+
+function OptimizationSheetsSection({ cutPlan }) {
+  const [hoveredPanelId, setHoveredPanelId] = useState(null)
+
+  const sheets = cutPlan?.sheets || []
+
+  const { placedCount, missingCount } = useMemo(() => {
+    return getUnplacedPanels(sheets, cutPlan?.totalPanelsCount || 0)
+  }, [sheets, cutPlan])
+
   if (!sheets.length) {
     return null
   }
@@ -19,9 +40,15 @@ function OptimizationSheetsSection({ sheets = [] }) {
       <div className="flex flex-col gap-2">
         <h2 className="text-lg font-semibold text-zinc-900">Rozpis tabulí</h2>
         <p className="text-sm text-zinc-600">
-          Přehled jednotlivých tabulí a dílců umístěných v řezném plánu.
+          Přehled jednotlivých tabulí, vizuální rozložení dílců a detailní seznam položek.
         </p>
       </div>
+
+      {missingCount > 0 && (
+        <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Nepodařilo se umístit {missingCount} z {cutPlan.totalPanelsCount} dílců. Na tabule bylo rozmístěno {placedCount} dílců.
+        </div>
+      )}
 
       <div className="mt-6 space-y-6">
         {sheets.map((sheet) => (
@@ -67,6 +94,15 @@ function OptimizationSheetsSection({ sheets = [] }) {
               </div>
             </div>
 
+            <div className="mt-4">
+              <SheetLayoutPreview
+                sheet={sheet}
+                hoveredPanelId={hoveredPanelId}
+                onPanelHover={setHoveredPanelId}
+                onPanelLeave={() => setHoveredPanelId(null)}
+              />
+            </div>
+
             <div className="mt-4 overflow-x-auto rounded-2xl border border-zinc-200 bg-white">
               <table className="min-w-full border-separate border-spacing-0">
                 <thead>
@@ -105,40 +141,49 @@ function OptimizationSheetsSection({ sheets = [] }) {
                 </thead>
 
                 <tbody>
-                  {sheet.items.map((item) => (
-                    <tr key={item.panelId}>
-                      <td className="border-b border-zinc-100 px-3 py-2 text-sm text-zinc-700">
-                        {item.panelId}
-                      </td>
-                      <td className="border-b border-zinc-100 px-3 py-2 text-sm text-zinc-700">
-                        {item.position || '—'}
-                      </td>
-                      <td className="border-b border-zinc-100 px-3 py-2 text-sm font-medium text-zinc-900">
-                        {item.description}
-                      </td>
-                      <td className="border-b border-zinc-100 px-3 py-2 text-sm text-zinc-700">
-                        {formatNumber(item.x, 2)}
-                      </td>
-                      <td className="border-b border-zinc-100 px-3 py-2 text-sm text-zinc-700">
-                        {formatNumber(item.y, 2)}
-                      </td>
-                      <td className="border-b border-zinc-100 px-3 py-2 text-sm text-zinc-700">
-                        {formatNumber(item.finalLength, 2)} × {formatNumber(item.finalWidth, 2)} mm
-                      </td>
-                      <td className="border-b border-zinc-100 px-3 py-2 text-sm text-zinc-700">
-                        {formatNumber(item.cutLength, 2)} × {formatNumber(item.cutWidth, 2)} mm
-                      </td>
-                      <td className="border-b border-zinc-100 px-3 py-2 text-sm text-zinc-700">
-                        {formatBoolean(item.isRotated)}
-                      </td>
-                      <td className="border-b border-zinc-100 px-3 py-2 text-sm text-zinc-700">
-                        {formatEdgeCodes(item)}
-                      </td>
-                      <td className="border-b border-zinc-100 px-3 py-2 text-sm text-zinc-700">
-                        {item.note || '—'}
-                      </td>
-                    </tr>
-                  ))}
+                  {sheet.items.map((item) => {
+                    const isHovered = hoveredPanelId === item.panelId
+
+                    return (
+                      <tr
+                        key={item.panelId}
+                        className={isHovered ? 'bg-zinc-100' : ''}
+                        onMouseEnter={() => setHoveredPanelId(item.panelId)}
+                        onMouseLeave={() => setHoveredPanelId(null)}
+                      >
+                        <td className="border-b border-zinc-100 px-3 py-2 text-sm text-zinc-700">
+                          {item.panelId}
+                        </td>
+                        <td className="border-b border-zinc-100 px-3 py-2 text-sm text-zinc-700">
+                          {item.position || '—'}
+                        </td>
+                        <td className="border-b border-zinc-100 px-3 py-2 text-sm font-medium text-zinc-900">
+                          {item.description}
+                        </td>
+                        <td className="border-b border-zinc-100 px-3 py-2 text-sm text-zinc-700">
+                          {formatNumber(item.x, 2)}
+                        </td>
+                        <td className="border-b border-zinc-100 px-3 py-2 text-sm text-zinc-700">
+                          {formatNumber(item.y, 2)}
+                        </td>
+                        <td className="border-b border-zinc-100 px-3 py-2 text-sm text-zinc-700">
+                          {formatNumber(item.finalLength, 2)} × {formatNumber(item.finalWidth, 2)} mm
+                        </td>
+                        <td className="border-b border-zinc-100 px-3 py-2 text-sm text-zinc-700">
+                          {formatNumber(item.cutLength, 2)} × {formatNumber(item.cutWidth, 2)} mm
+                        </td>
+                        <td className="border-b border-zinc-100 px-3 py-2 text-sm text-zinc-700">
+                          {formatBoolean(item.isRotated)}
+                        </td>
+                        <td className="border-b border-zinc-100 px-3 py-2 text-sm text-zinc-700">
+                          {formatEdgeCodes(item)}
+                        </td>
+                        <td className="border-b border-zinc-100 px-3 py-2 text-sm text-zinc-700">
+                          {item.note || '—'}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
